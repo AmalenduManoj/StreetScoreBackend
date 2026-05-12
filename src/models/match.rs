@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct Match {
     pub id: i64,
@@ -20,3 +19,4 @@ pub struct Match {
 
     pub status: String,
 }
+

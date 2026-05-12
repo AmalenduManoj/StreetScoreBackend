@@ -1,0 +1,37 @@
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+
+#[derive(Serialize, Deserialize, FromRow, Clone)]
+pub struct players{
+    pub id: i64,
+    pub name: String,
+    pub team_id: i64,
+    pub runs_scored: i32,
+    pub wickets_taken: i32,
+    pub matches_played: i32,
+    pub batting_average: f32,
+    pub bowling_average: f32,
+    pub role: String,
+    pub age: i32,
+    pub strike_rate: f32,
+    pub over_bowled: f32,
+    pub economy_rate: f32,
+    pub five_wicket_hauls: i32,
+    pub centuries: i32,
+    pub half_centuries: i32,
+    pub player_of_the_match_awards: i32,
+    pub player_of_the_series_awards: i32,
+    pub highest_score: i32,
+    pub best_bowling_figures: String,
+    pub is_active: bool,
+    pub debut_date: String,
+    pub last_match_date: String,
+    pub profile_picture_url: String,
+    pub bio: String,
+    pub ball_faced: i32,
+    pub fours: i32,
+    pub sixes: i32,
+    pub three_wicket_hauls: i32,
+    pub catches: i32,
+    pub stumpings: i32,
+}
