@@ -27,8 +27,9 @@ pub async fn signup(
     pool: web::Data<PgPool>,
     body: web::Json<SignupRequest>,
 ) -> impl Responder {
-    // Check if user exists
+ 
     let existing = sqlx::query("SELECT id FROM users WHERE email = $1")
+        .persistent(false)
         .bind(&body.email)
         .fetch_optional(pool.get_ref())
         .await;
@@ -45,10 +46,10 @@ pub async fn signup(
         Err(_) => return HttpResponse::InternalServerError().body("Hashing error"),
     };
 
-    // Create user
     let result = sqlx::query_as::<_, User>(
         "INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, NOW()) RETURNING id, email, password_hash, created_at"
     )
+    .persistent(false)
     .bind(&body.email)
     .bind(&password_hash)
     .fetch_one(pool.get_ref())
@@ -73,6 +74,7 @@ pub async fn login(
     let result = sqlx::query_as::<_, User>(
         "SELECT id, email, password_hash, created_at FROM users WHERE email = $1"
     )
+    .persistent(false)
     .bind(&body.email)
     .fetch_optional(pool.get_ref())
     .await;

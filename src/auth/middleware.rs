@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpMessage, http::StatusCode,
+    Error, HttpMessage,
 };
 use futures::future::LocalBoxFuture;
 use crate::auth::jwt::verify_token;
