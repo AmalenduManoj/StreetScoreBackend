@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS players_user_id_unique ON players(user_id);

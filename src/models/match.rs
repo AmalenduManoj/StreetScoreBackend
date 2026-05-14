@@ -11,11 +11,11 @@ pub struct Match {
 
     pub team1_score: i32,
     pub team1_wickets: i32,
-    pub team1_overs: f32,
+    pub team1_overs: f64,
 
     pub team2_score: i32,
     pub team2_wickets: i32,
-    pub team2_overs: f32,
+    pub team2_overs: f64,
 
     pub status: String,
 }

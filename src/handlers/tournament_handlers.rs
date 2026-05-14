@@ -24,7 +24,7 @@ pub async fn create_tournament(pool: web::Data<PgPool>, data: web::Json<Tourname
 
 pub async fn get_tournaments(pool: web::Data<PgPool>) -> impl Responder {
     let tournaments = sqlx::query_as::<_, Tournament>(
-        "SELECT id, name, location, start_date, end_date FROM tournaments",
+        "SELECT id, name FROM tournaments",
     )
     .persistent(false)
     .fetch_all(pool.get_ref())
