@@ -35,15 +35,15 @@ pub async fn signup(
         .await;
 
     match existing {
-        Ok(Some(_)) => return HttpResponse::BadRequest().body("User already exists"),
-        Err(_) => return HttpResponse::InternalServerError().body("Database error"),
+        Ok(Some(_)) => return HttpResponse::BadRequest().json(serde_json::json!({"error": "User already exists"})),
+        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Database error"})),
         _ => {}
     }
 
     // Hash password
     let password_hash = match hash(&body.password, 4) {
         Ok(hash) => hash,
-        Err(_) => return HttpResponse::InternalServerError().body("Hashing error"),
+        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Hashing error"})),
     };
 
     let result = sqlx::query_as::<_, User>(
@@ -59,11 +59,11 @@ pub async fn signup(
         Ok(user) => {
             let token = match generate_token(user.id, user.email.clone()) {
                 Ok(t) => t,
-                Err(_) => return HttpResponse::InternalServerError().body("Token generation failed"),
+                Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Token generation failed"})),
             };
             HttpResponse::Ok().json(AuthResponse { token, user })
         }
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
     }
 }
 
@@ -85,15 +85,15 @@ pub async fn login(
                 Ok(true) => {
                     let token = match generate_token(user.id, user.email.clone()) {
                         Ok(t) => t,
-                        Err(_) => return HttpResponse::InternalServerError().body("Token generation failed"),
+                        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Token generation failed"})),
                     };
                     HttpResponse::Ok().json(AuthResponse { token, user })
                 }
-                _ => HttpResponse::Unauthorized().body("Invalid credentials"),
+                _ => HttpResponse::Unauthorized().json(serde_json::json!({"error": "Invalid credentials"})),
             }
         }
-        Ok(None) => HttpResponse::Unauthorized().body("User not found"),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        Ok(None) => HttpResponse::Unauthorized().json(serde_json::json!({"error": "User not found"})),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
     }
 }
 
