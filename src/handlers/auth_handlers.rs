@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use sqlx::PgPool;
 use serde::{Deserialize, Serialize};
 use bcrypt::{hash, verify};
@@ -97,7 +97,12 @@ pub async fn login(
     }
 }
 
-pub async fn verify_auth(claims: web::Data<Claims>) -> impl Responder {
+pub async fn verify_auth(req: HttpRequest) -> impl Responder {
+    let claims = match req.extensions().get::<Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().json(serde_json::json!({"error": "Missing auth claims"})),
+    };
+
     HttpResponse::Ok().json(serde_json::json!({
         "user_id": claims.user_id,
         "email": claims.email,

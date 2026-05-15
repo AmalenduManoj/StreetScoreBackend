@@ -1,27 +1,60 @@
 use actix_web::{web, HttpResponse, Responder};
 use sqlx::PgPool;
 
-use crate::models::team::Team;
+use crate::models::team::{CreateTeamRequest, Team};
 
-pub async fn create_team(pool: web::Data<PgPool>, data: web::Json<Team>) -> impl Responder {
-    let result = sqlx::query(
-        "INSERT INTO teams (name, city, matches_played, wins, losses, draws, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+pub async fn create_team(
+    pool: web::Data<PgPool>,
+    data: web::Json<CreateTeamRequest>,
+) -> impl Responder {
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    };
+
+    let team_id = match sqlx::query_scalar::<_, i64>(
+        "INSERT INTO teams (name, city, matches_played, wins, losses, draws, created_by_user_id)
+         VALUES ($1, $2, 0, 0, 0, 0, $3)
+         RETURNING id",
     )
     .bind(&data.name)
     .bind(&data.city)
-    .bind(data.matches_played)
-    .bind(data.wins)
-    .bind(data.losses)
-    .bind(data.draws)
     .bind(data.created_by_user_id)
-    .persistent(false)
-    .execute(pool.get_ref())
-    .await;
+    .fetch_one(&mut *tx)
+    .await
+    {
+        Ok(id) => id,
+        Err(e) => {
+            let _ = tx.rollback().await;
+            return HttpResponse::InternalServerError().body(e.to_string());
+        }
+    };
 
-    match result {
-        Ok(_) => HttpResponse::Ok().body("Team created"),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    for player_id in &data.player_ids {
+        if let Err(e) = sqlx::query(
+            "INSERT INTO team_player_registry (team_id, player_id, user_id)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (team_id, player_id) DO NOTHING",
+        )
+        .bind(team_id)
+        .bind(player_id)
+        .bind(data.created_by_user_id)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            return HttpResponse::InternalServerError().body(e.to_string());
+        }
     }
+
+    if let Err(e) = tx.commit().await {
+        return HttpResponse::InternalServerError().body(e.to_string());
+    }
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "message": "Team created",
+        "team_id": team_id
+    }))
 }
 
 pub async fn get_teams(pool: web::Data<PgPool>) -> impl Responder {

@@ -114,3 +114,23 @@ pub async fn update_player(pool: web::Data<PgPool>, id: web::Path<i64>, data: we
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
+
+
+pub async fn get_player_me(req: HttpRequest, pool: web::Data<PgPool>) -> impl Responder {
+    let claims = match req.extensions().get::<Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
+    let player = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE user_id = $1")
+        .persistent(false)
+        .bind(claims.user_id)
+        .fetch_optional(pool.get_ref())
+        .await;
+
+    match player {
+        Ok(Some(player)) => HttpResponse::Ok().json(player),
+        Ok(None) => HttpResponse::NotFound().body("Player not found for this user"),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
