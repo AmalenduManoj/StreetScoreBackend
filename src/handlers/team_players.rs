@@ -1,6 +1,8 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, web,HttpMessage};
 use sqlx::PgPool;
 use crate::models::teamplayerregistry::teamplayerregistry;
+use crate::models::players::Players;
+use crate::auth::jwt::Claims;
 
 
 pub async fn add_player_to_team(pool: web::Data<PgPool>, data: web::Json<teamplayerregistry>) -> impl Responder {
@@ -21,8 +23,8 @@ pub async fn add_player_to_team(pool: web::Data<PgPool>, data: web::Json<teampla
 }
 
 pub async fn get_players_in_team(pool: web::Data<PgPool>, team_id: web::Path<i64>) -> impl Responder {
-    let players = sqlx::query_as::<_, teamplayerregistry>(
-        "SELECT * FROM team_player_registry WHERE team_id = $1",
+    let players = sqlx::query_as::<_, Players>(
+        "SELECT p.* FROM team_player_registry tr JOIN players p ON tr.player_id = p.id WHERE tr.team_id = $1",
     )
     .bind(team_id.into_inner())
     .persistent(false)
@@ -68,3 +70,24 @@ pub async fn get_teams_for_player(pool: web::Data<PgPool>, player_id: web::Path<
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
+
+pub async fn get_team_created_by_user(req: HttpRequest, pool: web::Data<PgPool>) -> impl Responder {
+    let claims = match req.extensions().get::<Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
+    let teams = sqlx::query_scalar::<_, String>(
+        "SELECT name FROM teams WHERE created_by_user_id = $1"
+    )
+    .bind(claims.user_id)
+    .persistent(false)
+    .fetch_all(pool.get_ref())
+    .await;
+
+    match teams {
+        Ok(teams) => HttpResponse::Ok().json(teams),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+

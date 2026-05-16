@@ -30,7 +30,6 @@ pub async fn create_player(req: HttpRequest, pool: web::Data<PgPool>, data: web:
         None => return HttpResponse::Unauthorized().body("Missing auth claims"),
     };
 
-    // Ensure a user can only have one player
     let exists = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM players WHERE user_id = $1)")
         .persistent(false)
         .bind(claims.user_id)

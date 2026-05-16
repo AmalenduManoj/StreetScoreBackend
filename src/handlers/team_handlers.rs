@@ -77,11 +77,12 @@ pub async fn get_team_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> impl
     )
     .bind(id.into_inner())
     .persistent(false)
-    .fetch_one(pool.get_ref())
+    .fetch_optional(pool.get_ref())
     .await;
 
     match team {
-        Ok(team) => HttpResponse::Ok().json(team),
+        Ok(Some(team)) => HttpResponse::Ok().json(team),
+        Ok(None) => HttpResponse::NotFound().body("Team not found"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

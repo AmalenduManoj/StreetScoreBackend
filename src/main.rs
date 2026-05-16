@@ -57,6 +57,17 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("")
                     .wrap(AuthMiddleware)
+                    .wrap(
+                        Cors::default()
+                            .allowed_origin("http://localhost:5173")
+                            .allowed_origin("http://127.0.0.1:3000")
+                            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+                            .allowed_headers(vec![
+                                actix_web::http::header::AUTHORIZATION,
+                                actix_web::http::header::CONTENT_TYPE,
+                            ])
+                            .supports_credentials()
+                    )
                     .route("/auth/verify", web::get().to(verify_auth))
                     .configure(match_routes_protected)  
                     .configure(player_routes_protected)

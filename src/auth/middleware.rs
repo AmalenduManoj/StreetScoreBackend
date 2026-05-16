@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpMessage,
+    Error, HttpMessage, http::Method, HttpResponse,
 };
 use futures::future::LocalBoxFuture;
 use crate::auth::jwt::verify_token;
@@ -41,6 +41,12 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
+        // Allow CORS preflight requests to proceed so CORS middleware can respond
+        if req.method() == &Method::OPTIONS {
+            let fut = self.service.call(req);
+            return Box::pin(async move { fut.await });
+        }
+
         let token = req.headers()
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
@@ -59,14 +65,38 @@ where
                     }
                     Err(_) => {
                         Box::pin(async move {
-                            Err(actix_web::error::ErrorUnauthorized("Invalid token"))
+                            let origin = req
+                                .headers()
+                                .get("Origin")
+                                .and_then(|v| v.to_str().ok())
+                                .unwrap_or("*");
+
+                            let resp = HttpResponse::Unauthorized()
+                                .insert_header(("Access-Control-Allow-Origin", origin))
+                                .insert_header(("Access-Control-Allow-Credentials", "true"))
+                                .body("Invalid token");
+
+                            let internal = actix_web::error::InternalError::from_response("", resp);
+                            Err(internal.into())
                         })
                     }
                 }
             }
             None => {
                 Box::pin(async move {
-                    Err(actix_web::error::ErrorUnauthorized("Missing Authorization header"))
+                    let origin = req
+                        .headers()
+                        .get("Origin")
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("*");
+
+                    let resp = HttpResponse::Unauthorized()
+                        .insert_header(("Access-Control-Allow-Origin", origin))
+                        .insert_header(("Access-Control-Allow-Credentials", "true"))
+                        .body("Missing Authorization header");
+
+                    let internal = actix_web::error::InternalError::from_response("", resp);
+                    Err(internal.into())
                 })
             }
         }
