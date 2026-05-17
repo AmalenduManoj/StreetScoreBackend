@@ -1,6 +1,7 @@
 use actix_web::{HttpResponse, web,Responder,HttpRequest, HttpMessage};
 use sqlx::PgPool;
 use serde::Deserialize;
+use crate::models::team::Team;
 use crate::models::tournaments::Tournament;
 use crate::auth::jwt::Claims;
 
@@ -38,8 +39,12 @@ pub async fn get_team_in_tournament(
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
     }
 
-    let team_ids = match sqlx::query_as::<_, Tournament>(
-        "SELECT t.* FROM team_tournament_registry tr JOIN teams t ON tr.team_id = t.id WHERE tr.tournament_id = $1",
+    let team_ids = match sqlx::query_as::<_, Team>(
+        "SELECT t.id, t.name, t.city, t.matches_played, t.wins, t.losses, t.draws, t.created_by_user_id
+         FROM team_tournament_registry tr
+         JOIN teams t ON tr.team_id = t.id
+         WHERE tr.tournament_id = $1
+         ORDER BY t.name",
     )
     .bind(*tournament_id)
     .fetch_all(pool.get_ref())
@@ -64,7 +69,11 @@ pub async fn get_tournaments_for_team(
     };
 
     let tournament_ids = match sqlx::query_as::<_, Tournament>(
-        "SELECT t.* FROM team_tournament_registry tr JOIN tournaments t ON tr.tournament_id = t.id WHERE tr.team_id = $1",
+        "SELECT t.id, t.name, t.location, t.start_date, t.end_date, t.created_by_user_id
+         FROM team_tournament_registry tr
+         JOIN tournaments t ON tr.tournament_id = t.id
+         WHERE tr.team_id = $1
+         ORDER BY t.start_date DESC, t.id DESC",
     )
     .bind(*team_id)
     .fetch_all(pool.get_ref())

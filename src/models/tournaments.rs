@@ -9,4 +9,5 @@ pub struct Tournament {
     pub location: String,
     pub start_date: NaiveDateTime,
     pub end_date: chrono::NaiveDate,
+    pub created_by_user_id: i64,
 }

@@ -82,11 +82,12 @@ pub async fn get_player_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> im
     let player = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE id = $1")
         .persistent(false)
         .bind(id.into_inner())
-        .fetch_one(pool.get_ref())
+        .fetch_optional(pool.get_ref())
         .await;
 
     match player {
-        Ok(player) => HttpResponse::Ok().json(player),
+        Ok(Some(player)) => HttpResponse::Ok().json(player),
+        Ok(None) => HttpResponse::NotFound().body("Player not found"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

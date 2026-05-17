@@ -35,7 +35,7 @@ pub async fn create_tournament(
 
     let tournament_id = match sqlx::query_scalar::<_, i64>(
            "INSERT INTO tournaments (name, location, start_date, end_date, created_by_user_id)
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES ($1, $2, $3::timestamp, $4::date, $5)
             RETURNING id",
     )
     .bind(&data.name)
@@ -82,8 +82,31 @@ pub async fn create_tournament(
 
 pub async fn get_tournaments(pool: web::Data<PgPool>) -> impl Responder {
     let tournaments = sqlx::query_as::<_, Tournament>(
-        "SELECT id, name FROM tournaments",
+        "SELECT id, name, location, start_date, end_date, created_by_user_id FROM tournaments ORDER BY start_date DESC, id DESC",
     )
+    .persistent(false)
+    .fetch_all(pool.get_ref())
+    .await;
+
+    match tournaments {
+        Ok(tournaments) => HttpResponse::Ok().json(tournaments),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
+pub async fn get_my_tournaments(req: HttpRequest, pool: web::Data<PgPool>) -> impl Responder {
+    let claims = match req.extensions().get::<Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
+    let tournaments = sqlx::query_as::<_, Tournament>(
+        "SELECT id, name, location, start_date, end_date, created_by_user_id
+         FROM tournaments
+         WHERE created_by_user_id = $1
+         ORDER BY start_date DESC, id DESC",
+    )
+    .bind(claims.user_id)
     .persistent(false)
     .fetch_all(pool.get_ref())
     .await;
@@ -96,15 +119,16 @@ pub async fn get_tournaments(pool: web::Data<PgPool>) -> impl Responder {
 
 pub async fn get_tournament_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> impl Responder {
     let tournament = sqlx::query_as::<_, Tournament>(
-        "SELECT id, name, location, start_date, end_date FROM tournaments WHERE id = $1",
+        "SELECT id, name, location, start_date, end_date, created_by_user_id FROM tournaments WHERE id = $1",
     )
     .bind(id.into_inner())
     .persistent(false)
-    .fetch_one(pool.get_ref())
+    .fetch_optional(pool.get_ref())
     .await;
 
     match tournament {
-        Ok(tournament) => HttpResponse::Ok().json(tournament),
+        Ok(Some(tournament)) => HttpResponse::Ok().json(tournament),
+        Ok(None) => HttpResponse::NotFound().body("Tournament not found"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
