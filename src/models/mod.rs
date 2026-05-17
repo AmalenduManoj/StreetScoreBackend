@@ -4,3 +4,4 @@ pub mod players;
 pub mod users;
 pub mod tournaments;
 pub mod teamplayerregistry;
+pub mod teamtournamentregistry;

@@ -1,12 +1,18 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder, HttpRequest, HttpMessage};
 use sqlx::PgPool;
 
 use crate::models::team::{CreateTeamRequest, Team};
 
 pub async fn create_team(
     pool: web::Data<PgPool>,
+    req: HttpRequest,
     data: web::Json<CreateTeamRequest>,
 ) -> impl Responder {
+    let claims = match req.extensions().get::<crate::auth::jwt::Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
     let mut tx = match pool.begin().await {
         Ok(tx) => tx,
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
@@ -19,7 +25,7 @@ pub async fn create_team(
     )
     .bind(&data.name)
     .bind(&data.city)
-    .bind(data.created_by_user_id)
+    .bind(claims.user_id)
     .fetch_one(&mut *tx)
     .await
     {
@@ -38,7 +44,7 @@ pub async fn create_team(
         )
         .bind(team_id)
         .bind(player_id)
-        .bind(data.created_by_user_id)
+        .bind(claims.user_id)
         .execute(&mut *tx)
         .await
         {

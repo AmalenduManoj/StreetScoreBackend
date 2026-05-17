@@ -66,7 +66,8 @@ pub async fn create_player(req: HttpRequest, pool: web::Data<PgPool>, data: web:
 }
 
 pub async fn get_players(pool: web::Data<PgPool>) -> impl Responder {
-    let players = sqlx::query_as::<_, Players>("SELECT * FROM players")
+    let players = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE $1::BIGINT IS NULL")
+        .bind(Option::<i64>::None)
         .persistent(false)
         .fetch_all(pool.get_ref())
         .await;
