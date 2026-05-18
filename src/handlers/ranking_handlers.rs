@@ -33,6 +33,7 @@ pub async fn get_batsman_rankings(
          WHERE tournament_id = $1
          ORDER BY runs DESC, ball_faced ASC"
     )
+    .persistent(false)
     .bind(tournament_id.into_inner())
     .fetch_all(pool.get_ref())
     .await;
@@ -78,6 +79,7 @@ pub async fn get_batsman_ranking(
          FROM batsman_ranking
          WHERE tournament_id = $1 AND player_id = $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(player_id)
     .fetch_one(pool.get_ref())
@@ -122,6 +124,7 @@ pub async fn create_batsman_ranking(
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id"
     )
+    .persistent(false)
     .bind(data.tournament_id)
     .bind(data.player_id)
     .bind(data.runs)
@@ -157,6 +160,7 @@ pub async fn update_batsman_ranking(
          SET runs = $1, ball_faced = $2, no_of_outs = $3
          WHERE tournament_id = $4 AND player_id = $5"
     )
+    .persistent(false)
     .bind(data.runs)
     .bind(data.ball_faced)
     .bind(data.no_of_outs)
@@ -188,6 +192,7 @@ pub async fn get_bowler_rankings(
          WHERE tournament_id = $1
          ORDER BY wickets DESC, runs_given ASC"
     )
+    .persistent(false)
     .bind(tournament_id.into_inner())
     .fetch_all(pool.get_ref())
     .await;
@@ -233,6 +238,7 @@ pub async fn get_bowler_ranking(
          FROM bowler_ranking
          WHERE tournament_id = $1 AND player_id = $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(player_id)
     .fetch_one(pool.get_ref())
@@ -277,6 +283,7 @@ pub async fn create_bowler_ranking(
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id"
     )
+    .persistent(false)
     .bind(data.tournament_id)
     .bind(data.player_id)
     .bind(data.runs_given)
@@ -312,6 +319,7 @@ pub async fn update_bowler_ranking(
          SET runs_given = $1, ball_bowled = $2, wickets = $3
          WHERE tournament_id = $4 AND player_id = $5"
     )
+    .persistent(false)
     .bind(data.runs_given)
     .bind(data.ball_bowled)
     .bind(data.wickets)

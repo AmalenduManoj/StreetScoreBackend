@@ -24,6 +24,7 @@ pub async fn get_tournament_standings(
          WHERE tournament_id = $1
          ORDER BY points DESC, run_rate DESC"
     )
+    .persistent(false)
     .bind(tournament_id.into_inner())
     .fetch_all(pool.get_ref())
     .await;
@@ -62,6 +63,7 @@ pub async fn get_team_standing(
          FROM tournament_standing
          WHERE tournament_id = $1 AND team_id = $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(team_id)
     .fetch_one(pool.get_ref())
@@ -100,6 +102,7 @@ pub async fn create_standing(
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id"
     )
+    .persistent(false)
     .bind(data.tournament_id)
     .bind(data.team_id)
     .bind(data.match_played)
@@ -137,6 +140,7 @@ pub async fn update_standing(
          SET match_played = $1, wons = $2, losses = $3, points = $4, run_rate = $5
          WHERE tournament_id = $6 AND team_id = $7"
     )
+    .persistent(false)
     .bind(data.match_played)
     .bind(data.wons)
     .bind(data.losses)
@@ -172,6 +176,7 @@ pub async fn get_tournament_leaderboard(
          ORDER BY points DESC, run_rate DESC
          LIMIT $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(limit)
     .fetch_all(pool.get_ref())

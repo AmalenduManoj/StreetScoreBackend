@@ -23,6 +23,7 @@ pub async fn create_team(
          VALUES ($1, $2, 0, 0, 0, 0, $3)
          RETURNING id",
     )
+    .persistent(false)
     .bind(&data.name)
     .bind(&data.city)
     .bind(claims.user_id)
@@ -42,6 +43,7 @@ pub async fn create_team(
              VALUES ($1, $2, $3)
              ON CONFLICT (team_id, player_id) DO NOTHING",
         )
+        .persistent(false)
         .bind(team_id)
         .bind(player_id)
         .bind(claims.user_id)

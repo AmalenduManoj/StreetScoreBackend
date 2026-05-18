@@ -16,6 +16,7 @@ use crate::routes::player_routes::player_routes_protected;
 use crate::routes::team_routes::team_routes_protected;
 use crate::routes::tournament_routes::tournaments_routes_protected;
 use crate::handlers::tournament_handlers::{get_tournaments, get_tournament_by_id};
+use crate::handlers::team_tournament_handlers::get_team_in_tournament;
 use crate::handlers::team_handlers::{get_teams, get_team_by_id};
 use crate::handlers::player_handler::{get_players, get_player_by_id};
 use crate::routes::progress_routes::progress_routes;
@@ -53,6 +54,7 @@ async fn main() -> std::io::Result<()> {
             .route("/matches/{id}", web::get().to(get_match_by_id))
             .route("/tournaments", web::get().to(get_tournaments))
             .route("/tournaments/{id}", web::get().to(get_tournament_by_id))
+            .route("/tournaments/{tournament_id}/teams", web::get().to(get_team_in_tournament))
             .route("/teams", web::get().to(get_teams))
             .route("/teams/{id}", web::get().to(get_team_by_id))
             .route("/players", web::get().to(get_players))

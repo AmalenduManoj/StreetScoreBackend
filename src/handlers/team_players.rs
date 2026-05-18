@@ -88,6 +88,7 @@ pub async fn remove_player_from_team(
     let owner: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
         "SELECT created_by_user_id FROM teams WHERE id = $1",
     )
+    .persistent(false)
     .bind(data.team_id)
     .fetch_optional(pool.get_ref())
     .await;
@@ -103,9 +104,9 @@ pub async fn remove_player_from_team(
     }
 
     let result = sqlx::query("DELETE FROM team_player_registry WHERE team_id = $1 AND player_id = $2")
+        .persistent(false)
         .bind(data.team_id)
         .bind(data.player_id)
-        .persistent(false)
         .execute(pool.get_ref())
         .await;
 

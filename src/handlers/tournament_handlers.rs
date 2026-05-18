@@ -38,6 +38,7 @@ pub async fn create_tournament(
             VALUES ($1, $2, $3::timestamp, $4::date, $5)
             RETURNING id",
     )
+    .persistent(false)
     .bind(&data.name)
     .bind(&data.location)
     .bind(data.start_date.clone())
@@ -59,6 +60,7 @@ pub async fn create_tournament(
              VALUES ($1, $2, $3)
              ON CONFLICT (team_id, tournament_id) DO NOTHING",
         )
+        .persistent(false)
         .bind(team_id)
         .bind(tournament_id)
         .bind(claims.user_id)

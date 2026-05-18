@@ -20,6 +20,7 @@ pub async fn create_tournament_match(
          VALUES ($1, $2, $3, NOW())
          RETURNING id"
     )
+    .persistent(false)
     .bind(data.tournament_id)
     .bind(data.match_id)
     .bind(data.match_number)
@@ -51,6 +52,7 @@ pub async fn get_tournament_matches(
          WHERE tournament_id = $1
          ORDER BY match_number ASC"
     )
+    .persistent(false)
     .bind(tournament_id.into_inner())
     .fetch_all(pool.get_ref())
     .await;
@@ -86,6 +88,7 @@ pub async fn get_tournament_match(
          FROM tournament_match
          WHERE tournament_id = $1 AND match_number = $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(match_number)
     .fetch_one(pool.get_ref())
@@ -121,6 +124,7 @@ pub async fn get_match_by_id(
          FROM tournament_match
          WHERE id = $1"
     )
+    .persistent(false)
     .bind(id.into_inner())
     .fetch_one(pool.get_ref())
     .await;
@@ -158,6 +162,7 @@ pub async fn update_tournament_match(
          SET tournament_id = $1, match_id = $2, match_number = $3
          WHERE id = $4"
     )
+    .persistent(false)
     .bind(data.tournament_id)
     .bind(data.match_id)
     .bind(data.match_number)
@@ -181,6 +186,7 @@ pub async fn delete_tournament_match(
     id: web::Path<i64>,
 ) -> HttpResponse {
     let result = sqlx::query("DELETE FROM tournament_match WHERE id = $1")
+        .persistent(false)
         .bind(id.into_inner())
         .execute(pool.get_ref())
         .await;
@@ -213,6 +219,7 @@ pub async fn get_match_full_details(
          JOIN matches m ON tm.match_id = m.id
          WHERE tm.tournament_id = $1 AND tm.match_number = $2"
     )
+    .persistent(false)
     .bind(tournament_id)
     .bind(match_number)
     .fetch_one(pool.get_ref())

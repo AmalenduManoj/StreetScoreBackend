@@ -12,29 +12,19 @@ pub struct TeamTournamentRequest {
 }
 
 pub async fn get_team_in_tournament(
-    req: HttpRequest,
     pool: web::Data<PgPool>,
     tournament_id: web::Path<i64>,
 ) -> impl Responder {
-    let _claims = match req.extensions().get::<Claims>() {
-        Some(claims) => claims.clone(),
-        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
-    };
-
-    // ensure requester is the tournament creator
-    let creator_check: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
-        "SELECT created_by_user_id FROM tournaments WHERE id = $1",
+    let tournament_exists: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
+        "SELECT id FROM tournaments WHERE id = $1",
     )
+    .persistent(false)
     .bind(*tournament_id)
     .fetch_optional(pool.get_ref())
     .await;
 
-    match creator_check {
-        Ok(Some(creator_id)) => {
-            if creator_id != _claims.user_id {
-                return HttpResponse::Forbidden().body("Only tournament creator can view or modify registrations");
-            }
-        }
+    match tournament_exists {
+        Ok(Some(_)) => {}
         Ok(None) => return HttpResponse::NotFound().body("Tournament not found"),
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
     }
@@ -46,6 +36,7 @@ pub async fn get_team_in_tournament(
          WHERE tr.tournament_id = $1
          ORDER BY t.name",
     )
+    .persistent(false)
     .bind(*tournament_id)
     .fetch_all(pool.get_ref())
     .await
@@ -75,6 +66,7 @@ pub async fn get_tournaments_for_team(
          WHERE tr.team_id = $1
          ORDER BY t.start_date DESC, t.id DESC",
     )
+    .persistent(false)
     .bind(*team_id)
     .fetch_all(pool.get_ref())
     .await
@@ -101,6 +93,7 @@ pub async fn add_team_to_tournament(
     let creator_check: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
         "SELECT created_by_user_id FROM tournaments WHERE id = $1",
     )
+    .persistent(false)
     .bind(*tournament_id)
     .fetch_optional(pool.get_ref())
     .await;
@@ -121,6 +114,7 @@ pub async fn add_team_to_tournament(
              VALUES ($1, $2, $3)
              ON CONFLICT (team_id, tournament_id) DO NOTHING",
         )
+        .persistent(false)
         .bind(team_id)
         .bind(*tournament_id)
         .bind(claims.user_id)
@@ -149,6 +143,7 @@ pub async fn delete_team_from_tournament(
     let creator_check: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
         "SELECT created_by_user_id FROM tournaments WHERE id = $1",
     )
+    .persistent(false)
     .bind(*tournament_id)
     .fetch_optional(pool.get_ref())
     .await;
@@ -167,6 +162,7 @@ pub async fn delete_team_from_tournament(
         if let Err(e) = sqlx::query(
             "DELETE FROM team_tournament_registry WHERE team_id = $1 AND tournament_id = $2 AND user_id = $3",
         )
+        .persistent(false)
         .bind(team_id)
         .bind(*tournament_id)
         .bind(_claims.user_id)

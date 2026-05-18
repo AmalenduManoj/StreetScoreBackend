@@ -13,6 +13,7 @@ pub async fn create_progress(
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id"
     )
+    .persistent(false)
     .bind(data.match_id)
     .bind(data.batter_id)
     .bind(data.bowler_id)
@@ -50,6 +51,7 @@ pub async fn get_progress_by_match(
          WHERE match_id = $1
          ORDER BY over_number, ball_number"
     )
+    .persistent(false)
     .bind(match_id.into_inner())
     .fetch_all(pool.get_ref())
     .await;
@@ -75,6 +77,7 @@ pub async fn get_progress_by_over(
          WHERE match_id = $1 AND over_number = $2
          ORDER BY ball_number"
     )
+    .persistent(false)
     .bind(match_id)
     .bind(over_number)
     .fetch_all(pool.get_ref())
@@ -98,6 +101,7 @@ pub async fn get_progress_by_id(
          FROM progress
          WHERE id = $1"
     )
+    .persistent(false)
     .bind(id.into_inner())
     .fetch_one(pool.get_ref())
     .await;
@@ -127,6 +131,7 @@ pub async fn update_progress(
              over_number = $5, ball_number = $6, commentary = $7
          WHERE id = $8"
     )
+    .persistent(false)
     .bind(data.batter_id)
     .bind(data.bowler_id)
     .bind(data.runs_scored)
@@ -154,6 +159,7 @@ pub async fn delete_progress(
     id: web::Path<i64>,
 ) -> HttpResponse {
     let result = sqlx::query("DELETE FROM progress WHERE id = $1")
+        .persistent(false)
         .bind(id.into_inner())
         .execute(pool.get_ref())
         .await;
@@ -185,6 +191,7 @@ pub async fn get_match_summary(
          FROM progress
          WHERE match_id = $1"
     )
+    .persistent(false)
     .bind(match_id.into_inner())
     .fetch_one(pool.get_ref())
     .await;
