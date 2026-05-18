@@ -5,3 +5,7 @@ pub mod team_handlers;
 pub mod player_handler;
 pub mod team_players;
 pub mod team_tournament_handlers;
+pub mod progress_handlers;
+pub mod tournament_standing_handlers;
+pub mod ranking_handlers;
+pub mod tournament_match_handlers;

@@ -5,3 +5,6 @@ pub mod users;
 pub mod tournaments;
 pub mod teamplayerregistry;
 pub mod teamtournamentregistry;
+pub mod progress;
+pub mod tournament_standing;
+pub mod tournament_match;
