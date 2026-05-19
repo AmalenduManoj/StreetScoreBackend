@@ -70,6 +70,26 @@ pub async fn create_tournament(
             let _ = tx.rollback().await;
             return HttpResponse::InternalServerError().body(e.to_string());
         }
+        // ensure a standing entry exists for this team with zeroed stats
+        if let Err(e) = sqlx::query(
+            "INSERT INTO tournament_standing (tournament_id, team_id, match_played, wons, losses, points, run_rate)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (tournament_id, team_id) DO NOTHING",
+        )
+        .persistent(false)
+        .bind(tournament_id)
+        .bind(team_id)
+        .bind(0_i32)
+        .bind(0_i32)
+        .bind(0_i32)
+        .bind(0_i32)
+        .bind(0.0_f64)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            return HttpResponse::InternalServerError().body(e.to_string());
+        }
     }
 
     if let Err(e) = tx.commit().await {

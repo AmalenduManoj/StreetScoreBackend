@@ -28,7 +28,12 @@ pub async fn get_batsman_rankings(
     tournament_id: web::Path<i64>,
 ) -> HttpResponse {
     let result = sqlx::query(
-        "SELECT id, tournament_id, player_id, runs, ball_faced, no_of_outs
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(player_id, 0) AS player_id,
+                COALESCE(runs, 0) AS runs,
+                COALESCE(ball_faced, 0) AS ball_faced,
+                COALESCE(no_of_outs, 0) AS no_of_outs
          FROM batsman_ranking
          WHERE tournament_id = $1
          ORDER BY runs DESC, ball_faced ASC"
@@ -41,21 +46,27 @@ pub async fn get_batsman_rankings(
     match result {
         Ok(rows) => {
             let rankings: Vec<_> = rows.iter().enumerate().map(|(idx, row)| {
-                let ball_faced: i32 = row.get("ball_faced");
+                let ball_faced: i32 = row.try_get::<i32, _>("ball_faced").unwrap_or(0);
+                let runs: i32 = row.try_get::<i32, _>("runs").unwrap_or(0);
+                let no_of_outs: i32 = row.try_get::<i32, _>("no_of_outs").unwrap_or(0);
                 let strike_rate = if ball_faced > 0 {
-                    (row.get::<i32, _>("runs") as f64 / ball_faced as f64) * 100.0
+                    (runs as f64 / ball_faced as f64) * 100.0
                 } else {
                     0.0
                 };
-                
+
+                let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+                let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+                let player_id: i64 = row.try_get::<i64, _>("player_id").unwrap_or(0);
+
                 serde_json::json!({
                     "rank": idx + 1,
-                    "id": row.get::<i64, _>("id"),
-                    "tournament_id": row.get::<i64, _>("tournament_id"),
-                    "player_id": row.get::<i64, _>("player_id"),
-                    "runs": row.get::<i32, _>("runs"),
+                    "id": id,
+                    "tournament_id": tournament_id,
+                    "player_id": player_id,
+                    "runs": runs,
                     "ball_faced": ball_faced,
-                    "no_of_outs": row.get::<i32, _>("no_of_outs"),
+                    "no_of_outs": no_of_outs,
                     "strike_rate": format!("{:.2}", strike_rate)
                 })
             }).collect();
@@ -75,7 +86,12 @@ pub async fn get_batsman_ranking(
     let (tournament_id, player_id) = path.into_inner();
     
     let result = sqlx::query(
-        "SELECT id, tournament_id, player_id, runs, ball_faced, no_of_outs
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(player_id, 0) AS player_id,
+                COALESCE(runs, 0) AS runs,
+                COALESCE(ball_faced, 0) AS ball_faced,
+                COALESCE(no_of_outs, 0) AS no_of_outs
          FROM batsman_ranking
          WHERE tournament_id = $1 AND player_id = $2"
     )
@@ -87,20 +103,26 @@ pub async fn get_batsman_ranking(
 
     match result {
         Ok(row) => {
-            let ball_faced: i32 = row.get("ball_faced");
+            let ball_faced: i32 = row.try_get::<i32, _>("ball_faced").unwrap_or(0);
+            let runs: i32 = row.try_get::<i32, _>("runs").unwrap_or(0);
+            let no_of_outs: i32 = row.try_get::<i32, _>("no_of_outs").unwrap_or(0);
             let strike_rate = if ball_faced > 0 {
-                (row.get::<i32, _>("runs") as f64 / ball_faced as f64) * 100.0
+                (runs as f64 / ball_faced as f64) * 100.0
             } else {
                 0.0
             };
-            
+
+            let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+            let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+            let player_id: i64 = row.try_get::<i64, _>("player_id").unwrap_or(0);
+
             let ranking = serde_json::json!({
-                "id": row.get::<i64, _>("id"),
-                "tournament_id": row.get::<i64, _>("tournament_id"),
-                "player_id": row.get::<i64, _>("player_id"),
-                "runs": row.get::<i32, _>("runs"),
+                "id": id,
+                "tournament_id": tournament_id,
+                "player_id": player_id,
+                "runs": runs,
                 "ball_faced": ball_faced,
-                "no_of_outs": row.get::<i32, _>("no_of_outs"),
+                "no_of_outs": no_of_outs,
                 "strike_rate": format!("{:.2}", strike_rate)
             });
             HttpResponse::Ok().json(ranking)
@@ -187,7 +209,12 @@ pub async fn get_bowler_rankings(
     tournament_id: web::Path<i64>,
 ) -> HttpResponse {
     let result = sqlx::query(
-        "SELECT id, tournament_id, player_id, runs_given, ball_bowled, wickets
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(player_id, 0) AS player_id,
+                COALESCE(runs_given, 0) AS runs_given,
+                COALESCE(ball_bowled, 0) AS ball_bowled,
+                COALESCE(wickets, 0) AS wickets
          FROM bowler_ranking
          WHERE tournament_id = $1
          ORDER BY wickets DESC, runs_given ASC"
@@ -200,21 +227,27 @@ pub async fn get_bowler_rankings(
     match result {
         Ok(rows) => {
             let rankings: Vec<_> = rows.iter().enumerate().map(|(idx, row)| {
-                let ball_bowled: i32 = row.get("ball_bowled");
+                let ball_bowled: i32 = row.try_get::<i32, _>("ball_bowled").unwrap_or(0);
+                let runs_given: i32 = row.try_get::<i32, _>("runs_given").unwrap_or(0);
+                let wickets: i32 = row.try_get::<i32, _>("wickets").unwrap_or(0);
                 let economy = if ball_bowled > 0 {
-                    (row.get::<i32, _>("runs_given") as f64 / (ball_bowled as f64 / 6.0)) 
+                    runs_given as f64 / (ball_bowled as f64 / 6.0)
                 } else {
                     0.0
                 };
-                
+
+                let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+                let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+                let player_id: i64 = row.try_get::<i64, _>("player_id").unwrap_or(0);
+
                 serde_json::json!({
                     "rank": idx + 1,
-                    "id": row.get::<i64, _>("id"),
-                    "tournament_id": row.get::<i64, _>("tournament_id"),
-                    "player_id": row.get::<i64, _>("player_id"),
-                    "runs_given": row.get::<i32, _>("runs_given"),
+                    "id": id,
+                    "tournament_id": tournament_id,
+                    "player_id": player_id,
+                    "runs_given": runs_given,
                     "ball_bowled": ball_bowled,
-                    "wickets": row.get::<i32, _>("wickets"),
+                    "wickets": wickets,
                     "economy_rate": format!("{:.2}", economy)
                 })
             }).collect();
@@ -234,7 +267,12 @@ pub async fn get_bowler_ranking(
     let (tournament_id, player_id) = path.into_inner();
     
     let result = sqlx::query(
-        "SELECT id, tournament_id, player_id, runs_given, ball_bowled, wickets
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(player_id, 0) AS player_id,
+                COALESCE(runs_given, 0) AS runs_given,
+                COALESCE(ball_bowled, 0) AS ball_bowled,
+                COALESCE(wickets, 0) AS wickets
          FROM bowler_ranking
          WHERE tournament_id = $1 AND player_id = $2"
     )
@@ -246,20 +284,26 @@ pub async fn get_bowler_ranking(
 
     match result {
         Ok(row) => {
-            let ball_bowled: i32 = row.get("ball_bowled");
+            let ball_bowled: i32 = row.try_get::<i32, _>("ball_bowled").unwrap_or(0);
+            let runs_given: i32 = row.try_get::<i32, _>("runs_given").unwrap_or(0);
+            let wickets: i32 = row.try_get::<i32, _>("wickets").unwrap_or(0);
             let economy = if ball_bowled > 0 {
-                (row.get::<i32, _>("runs_given") as f64 / (ball_bowled as f64 / 6.0))
+                runs_given as f64 / (ball_bowled as f64 / 6.0)
             } else {
                 0.0
             };
-            
+
+            let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+            let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+            let player_id: i64 = row.try_get::<i64, _>("player_id").unwrap_or(0);
+
             let ranking = serde_json::json!({
-                "id": row.get::<i64, _>("id"),
-                "tournament_id": row.get::<i64, _>("tournament_id"),
-                "player_id": row.get::<i64, _>("player_id"),
-                "runs_given": row.get::<i32, _>("runs_given"),
+                "id": id,
+                "tournament_id": tournament_id,
+                "player_id": player_id,
+                "runs_given": runs_given,
                 "ball_bowled": ball_bowled,
-                "wickets": row.get::<i32, _>("wickets"),
+                "wickets": wickets,
                 "economy_rate": format!("{:.2}", economy)
             });
             HttpResponse::Ok().json(ranking)

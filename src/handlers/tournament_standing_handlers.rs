@@ -19,7 +19,14 @@ pub async fn get_tournament_standings(
     tournament_id: web::Path<i64>,
 ) -> HttpResponse {
     let result = sqlx::query(
-        "SELECT id, tournament_id, team_id, match_played, wons, losses, points, run_rate
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(team_id, 0) AS team_id,
+                COALESCE(match_played, 0) AS match_played,
+                COALESCE(wons, 0) AS wons,
+                COALESCE(losses, 0) AS losses,
+                COALESCE(points, 0) AS points,
+                COALESCE(run_rate, 0.0) AS run_rate
          FROM tournament_standing
          WHERE tournament_id = $1
          ORDER BY points DESC, run_rate DESC"
@@ -32,15 +39,24 @@ pub async fn get_tournament_standings(
     match result {
         Ok(rows) => {
             let standings: Vec<_> = rows.iter().map(|row| {
+                let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+                let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+                let team_id: i64 = row.try_get::<i64, _>("team_id").unwrap_or(0);
+                let match_played: i32 = row.try_get::<i32, _>("match_played").unwrap_or(0);
+                let wons: i32 = row.try_get::<i32, _>("wons").unwrap_or(0);
+                let losses: i32 = row.try_get::<i32, _>("losses").unwrap_or(0);
+                let points: i32 = row.try_get::<i32, _>("points").unwrap_or(0);
+                let run_rate: f64 = row.try_get::<f64, _>("run_rate").unwrap_or(0.0);
+
                 serde_json::json!({
-                    "id": row.get::<i64, _>("id"),
-                    "tournament_id": row.get::<i64, _>("tournament_id"),
-                    "team_id": row.get::<i64, _>("team_id"),
-                    "match_played": row.get::<i32, _>("match_played"),
-                    "wons": row.get::<i32, _>("wons"),
-                    "losses": row.get::<i32, _>("losses"),
-                    "points": row.get::<i32, _>("points"),
-                    "run_rate": row.get::<f64, _>("run_rate")
+                    "id": id,
+                    "tournament_id": tournament_id,
+                    "team_id": team_id,
+                    "match_played": match_played,
+                    "wons": wons,
+                    "losses": losses,
+                    "points": points,
+                    "run_rate": run_rate
                 })
             }).collect();
             HttpResponse::Ok().json(standings)
@@ -59,7 +75,14 @@ pub async fn get_team_standing(
     let (tournament_id, team_id) = path.into_inner();
     
     let result = sqlx::query(
-        "SELECT id, tournament_id, team_id, match_played, wons, losses, points, run_rate
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(team_id, 0) AS team_id,
+                COALESCE(match_played, 0) AS match_played,
+                COALESCE(wons, 0) AS wons,
+                COALESCE(losses, 0) AS losses,
+                COALESCE(points, 0) AS points,
+                COALESCE(run_rate, 0.0) AS run_rate
          FROM tournament_standing
          WHERE tournament_id = $1 AND team_id = $2"
     )
@@ -71,15 +94,24 @@ pub async fn get_team_standing(
 
     match result {
         Ok(row) => {
+            let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+            let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+            let team_id: i64 = row.try_get::<i64, _>("team_id").unwrap_or(0);
+            let match_played: i32 = row.try_get::<i32, _>("match_played").unwrap_or(0);
+            let wons: i32 = row.try_get::<i32, _>("wons").unwrap_or(0);
+            let losses: i32 = row.try_get::<i32, _>("losses").unwrap_or(0);
+            let points: i32 = row.try_get::<i32, _>("points").unwrap_or(0);
+            let run_rate: f64 = row.try_get::<f64, _>("run_rate").unwrap_or(0.0);
+
             let standing = serde_json::json!({
-                "id": row.get::<i64, _>("id"),
-                "tournament_id": row.get::<i64, _>("tournament_id"),
-                "team_id": row.get::<i64, _>("team_id"),
-                "match_played": row.get::<i32, _>("match_played"),
-                "wons": row.get::<i32, _>("wons"),
-                "losses": row.get::<i32, _>("losses"),
-                "points": row.get::<i32, _>("points"),
-                "run_rate": row.get::<f64, _>("run_rate")
+                "id": id,
+                "tournament_id": tournament_id,
+                "team_id": team_id,
+                "match_played": match_played,
+                "wons": wons,
+                "losses": losses,
+                "points": points,
+                "run_rate": run_rate
             });
             HttpResponse::Ok().json(standing)
         }
@@ -161,16 +193,20 @@ pub async fn update_standing(
     }
 }
 
-// Get top teams (leaderboard)
-pub async fn get_tournament_leaderboard(
+async fn get_tournament_leaderboard_internal(
     pool: web::Data<PgPool>,
-    path: web::Path<(i64, Option<i32>)>,
+    tournament_id: i64,
+    limit: i64,
 ) -> HttpResponse {
-    let (tournament_id, limit) = path.into_inner();
-    let limit = limit.unwrap_or(10) as i64;
-    
     let result = sqlx::query(
-        "SELECT id, tournament_id, team_id, match_played, wons, losses, points, run_rate
+        "SELECT id,
+                COALESCE(tournament_id, 0) AS tournament_id,
+                COALESCE(team_id, 0) AS team_id,
+                COALESCE(match_played, 0) AS match_played,
+                COALESCE(wons, 0) AS wons,
+                COALESCE(losses, 0) AS losses,
+                COALESCE(points, 0) AS points,
+                COALESCE(run_rate, 0.0) AS run_rate
          FROM tournament_standing
          WHERE tournament_id = $1
          ORDER BY points DESC, run_rate DESC
@@ -185,16 +221,25 @@ pub async fn get_tournament_leaderboard(
     match result {
         Ok(rows) => {
             let standings: Vec<_> = rows.iter().enumerate().map(|(idx, row)| {
+                let id: i64 = row.try_get::<i64, _>("id").unwrap_or(0);
+                let tournament_id: i64 = row.try_get::<i64, _>("tournament_id").unwrap_or(0);
+                let team_id: i64 = row.try_get::<i64, _>("team_id").unwrap_or(0);
+                let match_played: i32 = row.try_get::<i32, _>("match_played").unwrap_or(0);
+                let wons: i32 = row.try_get::<i32, _>("wons").unwrap_or(0);
+                let losses: i32 = row.try_get::<i32, _>("losses").unwrap_or(0);
+                let points: i32 = row.try_get::<i32, _>("points").unwrap_or(0);
+                let run_rate: f64 = row.try_get::<f64, _>("run_rate").unwrap_or(0.0);
+
                 serde_json::json!({
                     "rank": idx + 1,
-                    "id": row.get::<i64, _>("id"),
-                    "tournament_id": row.get::<i64, _>("tournament_id"),
-                    "team_id": row.get::<i64, _>("team_id"),
-                    "match_played": row.get::<i32, _>("match_played"),
-                    "wons": row.get::<i32, _>("wons"),
-                    "losses": row.get::<i32, _>("losses"),
-                    "points": row.get::<i32, _>("points"),
-                    "run_rate": row.get::<f64, _>("run_rate")
+                    "id": id,
+                    "tournament_id": tournament_id,
+                    "team_id": team_id,
+                    "match_played": match_played,
+                    "wons": wons,
+                    "losses": losses,
+                    "points": points,
+                    "run_rate": run_rate
                 })
             }).collect();
             HttpResponse::Ok().json(standings)
@@ -203,4 +248,21 @@ pub async fn get_tournament_leaderboard(
             "error": e.to_string()
         })),
     }
+}
+
+// Get top teams (leaderboard)
+pub async fn get_tournament_leaderboard(
+    pool: web::Data<PgPool>,
+    tournament_id: web::Path<i64>,
+) -> HttpResponse {
+    get_tournament_leaderboard_internal(pool, tournament_id.into_inner(), 10).await
+}
+
+// Get leaderboard with an explicit limit
+pub async fn get_tournament_leaderboard_with_limit(
+    pool: web::Data<PgPool>,
+    path: web::Path<(i64, i32)>,
+) -> HttpResponse {
+    let (tournament_id, limit) = path.into_inner();
+    get_tournament_leaderboard_internal(pool, tournament_id, limit as i64).await
 }

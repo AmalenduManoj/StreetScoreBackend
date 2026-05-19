@@ -167,7 +167,7 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 - GET `/teams/{id}` — get team
 - POST `/team_players` endpoints exist to add/remove players (protected)
 
-### Progress (Ball-by-ball)
+### Progress (Ball-by-ball, public GETs)
 
 - POST `/api/progress` — create delivery
   - Payload example:
@@ -192,7 +192,7 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 - DELETE `/api/progress/{id}` — delete delivery (protected)
 - GET `/api/progress/match/{match_id}/summary` — match aggregate stats
 
-### Tournament Standings
+### Tournament Standings (public GETs)
 
 - GET `/api/tournament/{tournament_id}/standings` — points table
 - GET `/api/tournament/{tournament_id}/standings/{team_id}` — team standing
@@ -200,7 +200,7 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 - PUT `/api/tournament/{tournament_id}/standings/{team_id}` — update standing (protected)
 - GET `/api/tournament/{tournament_id}/leaderboard` — top teams
 
-### Rankings
+### Rankings (public GETs)
 
 - GET `/api/tournament/{tournament_id}/rankings/batsmen` — batsman rankings
 - GET `/api/tournament/{tournament_id}/rankings/batsmen/{player_id}` — batsman detail
@@ -215,9 +215,28 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 ### Tournament Match Registry
 
 - POST `/api/tournament/{tournament_id}/matches` — create tournament match (protected)
-- GET `/api/tournament/{tournament_id}/matches` — list
-- GET `/api/tournament/{tournament_id}/matches/{match_number}` — get match
-- GET `/api/tournament/match/{id}` — get by id
+  - Payload:
+```json
+{
+  "match_number": 1,
+  "match_data": {
+    "team1_id": 1,
+    "team2_id": 2,
+    "venue": "Main Ground",
+    "total_overs": 20,
+    "team1_score": 0,
+    "team1_wickets": 0,
+    "team1_overs": 0,
+    "team2_score": 0,
+    "team2_wickets": 0,
+    "team2_overs": 0,
+    "status": "scheduled"
+  }
+}
+```
+- GET `/api/tournament/{tournament_id}/matches` — list tournament matches with embedded match details
+- GET `/api/tournament/{tournament_id}/matches/{match_number}` — get one tournament match with embedded match details
+- GET `/api/tournament/match/{id}` — get a tournament match by registry id with embedded match details
 - PUT `/api/tournament/match/{id}` — update (protected)
 - DELETE `/api/tournament/match/{id}` — delete (protected)
 - GET `/api/tournament/{tournament_id}/matches/{match_number}/details` — full match details
@@ -232,5 +251,3 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 - All timestamps use UTC ISO-8601
 - Points system: default 2 for win, 1 for tie/no-result, 0 for loss
 - Calculate strike-rate and economy as shown in handlers
-
-If you want, I can also add example Postman collection or OpenAPI spec next.

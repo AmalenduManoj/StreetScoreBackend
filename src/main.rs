@@ -19,11 +19,14 @@ use crate::handlers::tournament_handlers::{get_tournaments, get_tournament_by_id
 use crate::handlers::team_tournament_handlers::get_team_in_tournament;
 use crate::handlers::team_handlers::{get_teams, get_team_by_id};
 use crate::handlers::player_handler::{get_players, get_player_by_id};
+use crate::handlers::progress_handlers::{get_progress_by_match, get_progress_by_over, get_progress_by_id, get_match_summary};
+use crate::handlers::tournament_standing_handlers::{get_tournament_standings, get_team_standing, get_tournament_leaderboard, get_tournament_leaderboard_with_limit};
+use crate::handlers::ranking_handlers::{get_batsman_rankings, get_batsman_ranking, get_bowler_rankings, get_bowler_ranking};
 use crate::routes::progress_routes::progress_routes;
 use crate::routes::tournament_standing_routes::tournament_standing_routes;
 use crate::routes::ranking_routes::ranking_routes;
 use crate::routes::tournament_match_routes::tournament_match_routes_protected;
-use crate::handlers::tournament_match_handlers::{ get_tournament_matches, get_tournament_match};
+use crate::handlers::tournament_match_handlers::{ get_tournament_matches, get_tournament_match, get_match_by_id as get_tournament_match_by_id};
 use actix_cors::Cors;
 
 #[actix_web::main]
@@ -55,6 +58,7 @@ async fn main() -> std::io::Result<()> {
             .route("/matches/{id}", web::get().to(get_match_by_id))
             .route("/tournaments", web::get().to(get_tournaments))
             .route("/tournaments/{id}", web::get().to(get_tournament_by_id))
+            .route("/api/tournament/{id}", web::get().to(get_tournament_by_id))
             .route("/tournaments/{tournament_id}/teams", web::get().to(get_team_in_tournament))
             .route("/teams", web::get().to(get_teams))
             .route("/teams/{id}", web::get().to(get_team_by_id))
@@ -62,9 +66,21 @@ async fn main() -> std::io::Result<()> {
             .route("/players/stats/{id}", web::get().to(get_player_by_id))
             .route("/team_players/{team_id}", web::get().to(get_players_in_team))
             .route("/team_players/player/{player_id}", web::get().to(get_teams_for_player))
+            .route("/api/progress/match/{match_id}", web::get().to(get_progress_by_match))
+            .route("/api/progress/match/{match_id}/over/{over_number}", web::get().to(get_progress_by_over))
+            .route("/api/progress/{id}", web::get().to(get_progress_by_id))
+            .route("/api/progress/match/{match_id}/summary", web::get().to(get_match_summary))
+            .route("/api/tournament/{tournament_id}/standings", web::get().to(get_tournament_standings))
+            .route("/api/tournament/{tournament_id}/standings/{team_id}", web::get().to(get_team_standing))
+            .route("/api/tournament/{tournament_id}/leaderboard", web::get().to(get_tournament_leaderboard))
+            .route("/api/tournament/{tournament_id}/leaderboard/{limit}", web::get().to(get_tournament_leaderboard_with_limit))
+            .route("/api/tournament/{tournament_id}/rankings/batsmen", web::get().to(get_batsman_rankings))
+            .route("/api/tournament/{tournament_id}/rankings/batsmen/{player_id}", web::get().to(get_batsman_ranking))
+            .route("/api/tournament/{tournament_id}/rankings/bowlers", web::get().to(get_bowler_rankings))
+            .route("/api/tournament/{tournament_id}/rankings/bowlers/{player_id}", web::get().to(get_bowler_ranking))
             .route("/api/tournament/{tournament_id}/matches", web::get().to(get_tournament_matches))
             .route("/api/tournament/{tournament_id}/matches/{match_number}", web::get().to(get_tournament_match))
-            .route("/api/tournament/match/{id}", web::get().to(get_match_by_id))
+            .route("/api/tournament/match/{id}", web::get().to(get_tournament_match_by_id))
             .configure(progress_routes)
             .service(
                 web::scope("")
