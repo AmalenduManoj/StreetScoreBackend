@@ -3,7 +3,6 @@ use sqlx::{PgPool, Row};
 use crate::models::progress::progress;
 use chrono::Utc;
 
-// Create a new ball/delivery entry
 pub async fn create_progress(
     pool: web::Data<PgPool>,
     data: web::Json<progress>,
@@ -40,7 +39,6 @@ pub async fn create_progress(
     }
 }
 
-// Get all deliveries in a match
 pub async fn get_progress_by_match(
     pool: web::Data<PgPool>,
     match_id: web::Path<i64>,
@@ -64,7 +62,6 @@ pub async fn get_progress_by_match(
     }
 }
 
-// Get deliveries in a specific over
 pub async fn get_progress_by_over(
     pool: web::Data<PgPool>,
     path: web::Path<(i64, i32)>,
@@ -91,7 +88,6 @@ pub async fn get_progress_by_over(
     }
 }
 
-// Get specific delivery
 pub async fn get_progress_by_id(
     pool: web::Data<PgPool>,
     id: web::Path<i64>,
@@ -117,7 +113,6 @@ pub async fn get_progress_by_id(
     }
 }
 
-// Update delivery (for corrections)
 pub async fn update_progress(
     pool: web::Data<PgPool>,
     path: web::Path<i64>,
@@ -153,7 +148,6 @@ pub async fn update_progress(
     }
 }
 
-// Delete delivery
 pub async fn delete_progress(
     pool: web::Data<PgPool>,
     id: web::Path<i64>,
@@ -177,7 +171,6 @@ pub async fn delete_progress(
     }
 }
 
-// Get summary stats for a match
 pub async fn get_match_summary(
     pool: web::Data<PgPool>,
     match_id: web::Path<i64>,
