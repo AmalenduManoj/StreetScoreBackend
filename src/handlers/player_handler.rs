@@ -92,12 +92,17 @@ pub async fn get_player_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> im
     }
 }
 
-pub async fn update_player(pool: web::Data<PgPool>, id: web::Path<i64>, data: web::Json<UpdatePlayerRequest>) -> impl Responder {
+pub async fn update_player(req: HttpRequest, pool: web::Data<PgPool>, id: web::Path<i64>, data: web::Json<UpdatePlayerRequest>) -> impl Responder {
+    let claims = match req.extensions().get::<Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
     let profile_pic = data.profile_picture_url.as_deref().unwrap_or("");
     let bio = data.bio.as_deref().unwrap_or("");
 
     let result = sqlx::query(
-        "UPDATE players SET name=$1, is_active=$2, dob=$3, role=$4, profile_picture_url=$5, bio=$6 WHERE id=$7"
+        "UPDATE players SET name=$1, is_active=$2, dob=$3, role=$4, profile_picture_url=$5, bio=$6 WHERE id=$7 AND user_id=$8"
     )
     .persistent(false)
     .bind(&data.name)
@@ -107,11 +112,13 @@ pub async fn update_player(pool: web::Data<PgPool>, id: web::Path<i64>, data: we
     .bind(profile_pic)
     .bind(bio)
     .bind(id.into_inner())
+    .bind(claims.user_id)
     .execute(pool.get_ref())
     .await;
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(serde_json::json!({"message": "Player updated"})),
+        Ok(result) if result.rows_affected() > 0 => HttpResponse::Ok().json(serde_json::json!({"message": "Player updated"})),
+        Ok(_) => HttpResponse::NotFound().body("Player not found for this user"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

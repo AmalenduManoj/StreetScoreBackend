@@ -8,7 +8,7 @@ mod routes;
 use crate::routes::teamplayerroutes::team_players_routes_protected;
 use crate::handlers::team_players::{get_players_in_team, get_teams_for_player};
 use crate::config::db::create_pool;
-use crate::handlers::auth_handlers::{signup, login, verify_auth};
+use crate::handlers::auth_handlers::{signup, login, verify_auth, forgot_password, reset_password};
 use crate::handlers::match_handlers::{get_matches, get_live_match, get_match_by_id};
 use crate::auth::middleware::AuthMiddleware;
 use crate::routes::match_routes::match_routes_protected;
@@ -50,9 +50,10 @@ async fn main() -> std::io::Result<()> {
                     .supports_credentials()
             )
             .app_data(web::Data::new(pool.clone()))
-            // Public routes (no auth required)
             .route("/auth/signup", web::post().to(signup))
             .route("/auth/login", web::post().to(login))
+            .route("/auth/forgot-password", web::post().to(forgot_password))
+            .route("/auth/reset-password", web::post().to(reset_password))
             .route("/matches", web::get().to(get_matches))
             .route("/matches/live", web::get().to(get_live_match))
             .route("/matches/{id}", web::get().to(get_match_by_id))
@@ -60,7 +61,7 @@ async fn main() -> std::io::Result<()> {
             .route("/tournaments/{id}", web::get().to(get_tournament_by_id))
             .route("/api/tournament/{id}", web::get().to(get_tournament_by_id))
             .route("/tournaments/{tournament_id}/teams", web::get().to(get_team_in_tournament))
-            .route("/teams", web::get().to(get_teams))
+            .route("/teams/get", web::get().to(get_teams))
             .route("/teams/{id}", web::get().to(get_team_by_id))
             .route("/players", web::get().to(get_players))
             .route("/players/stats/{id}", web::get().to(get_player_by_id))

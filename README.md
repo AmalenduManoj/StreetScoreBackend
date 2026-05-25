@@ -19,6 +19,13 @@ Cricscore Backend is an Actix-web + SQLx Rust service providing APIs for cricket
 Example .env:
 
 DATABASE_URL=postgres://user:password@localhost:5432/cricscoredb
+FRONTEND_RESET_PASSWORD_URL=http://127.0.0.1:5173/
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_TLS=starttls
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=your-email@gmail.com
 
 ## Run locally
 
@@ -150,6 +157,16 @@ All endpoints below are relative to `http://127.0.0.1:8080`.
 - POST `/auth/login` — Login
   - Payload: `{ "email": "a@b.com", "password": "pass" }`
   - Response: `{ token, user }`
+
+- POST `/auth/forgot-password` — Generate password reset token
+  - Payload: `{ "email": "a@b.com" }`
+  - Response: `{ "message": "If an account exists for this email, a password reset link has been sent." }`
+  - Requires `FRONTEND_RESET_PASSWORD_URL`, `SMTP_HOST`, `SMTP_USERNAME`, and `SMTP_PASSWORD`.
+  - Optional SMTP env vars: `SMTP_TLS` defaults to `starttls`, `SMTP_PORT` defaults to `587` for `starttls` and `465` for `tls`, `SMTP_FROM` defaults to `SMTP_USERNAME`.
+
+- POST `/auth/reset-password` — Reset password with token
+  - Payload: `{ "token": "reset-token", "password": "new-password" }`
+  - Response: `{ "message": "Password reset successfully" }`
 
 ### Matches (public)
 
