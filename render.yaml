@@ -9,7 +9,7 @@ services:
     dockerContext: .
     plan: free
     region: oregon
-    healthCheckPath: /teams/get
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         sync: false

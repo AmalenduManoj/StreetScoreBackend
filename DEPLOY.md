@@ -161,7 +161,30 @@ VITE_API_BASE_URL=https://your-api-host.example.com npm run build
 
 Deploy `dist/` to Vercel, Netlify, or Cloudflare Pages.
 
-## 9. Notes
+## 9. Render: “Application exited early”
+
+The container exits immediately if startup fails. Check **Logs** in the Render dashboard (not just the deploy summary).
+
+| Log message | Fix |
+|-------------|-----|
+| `DATABASE_URL is not set` | Render → **Environment** → add `DATABASE_URL` (full Supabase URI) |
+| `Failed to connect to the database` | Use **session pooler** port **5432**, append `?sslmode=require`; unpause Supabase; verify password |
+| `Invalid DATABASE_URL` | No spaces in the URL; special characters in password must be URL-encoded |
+| `Address already in use` / bind error | Remove any custom `PORT` you set — let Render inject `PORT` automatically |
+| Build OK but instant exit, no log | Redeploy after pushing latest `Dockerfile`; set **Health Check Path** to `/health` |
+
+**Required Render env vars**
+
+```text
+DATABASE_URL=postgresql://postgres.[ref]:[PASSWORD]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require
+ALLOWED_ORIGINS=https://your-frontend.onrender.com
+```
+
+Do **not** set `PORT` manually on Render.
+
+**Health check:** `/health` (no database). API routes like `/teams/get` still need a working DB.
+
+## 10. Notes
 
 - First Docker build can take **5–15 minutes** (Rust compile). Later builds are faster thanks to dependency caching.
 - Do **not** commit `.env` with secrets; use the host’s secret manager.

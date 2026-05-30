@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 
 mod auth;
 mod config;
@@ -7,7 +7,7 @@ mod models;
 mod routes;
 use crate::routes::teamplayerroutes::team_players_routes_protected;
 use crate::handlers::team_players::{get_players_in_team, get_teams_for_player};
-use crate::config::db::create_pool;
+use crate::config::db::connect_pool_with_retry;
 use crate::handlers::auth_handlers::{signup, login, verify_auth, forgot_password, reset_password};
 use crate::handlers::match_handlers::{get_matches, get_live_match, get_match_by_id};
 use crate::auth::middleware::AuthMiddleware;
@@ -52,24 +52,50 @@ fn build_cors() -> Cors {
     cors
 }
 
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok().body("ok")
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let _ = dotenvy::dotenv();
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = create_pool(&database_url).await;
+
+    let database_url = match std::env::var("DATABASE_URL") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            eprintln!(
+                "ERROR: DATABASE_URL is not set. In Render → Environment, add your Supabase URL \
+                 (session pooler port 5432, include ?sslmode=require)."
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let pool = match connect_pool_with_retry(&database_url, 8).await {
+        Ok(pool) => pool,
+        Err(err) => {
+            eprintln!("ERROR: Could not connect to Postgres after retries: {err}");
+            eprintln!("Check: Supabase project not paused, password correct, port 5432 pooler URL.");
+            std::process::exit(1);
+        }
+    };
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
-    let port = std::env::var("PORT")
-        .unwrap_or_else(|_| "8080".into())
-        .parse::<u16>()
-        .expect("PORT must be a number");
+    let port = match std::env::var("PORT") {
+        Ok(value) => value.parse::<u16>().unwrap_or_else(|_| {
+            eprintln!("ERROR: PORT must be a number, got {value:?}");
+            std::process::exit(1);
+        }),
+        Err(_) => 8080,
+    };
 
-    println!("Cricscore API listening on {host}:{port}");
+    eprintln!("Cricscore API listening on {host}:{port}");
 
     HttpServer::new(move || {
         App::new()
             .wrap(build_cors())
             .app_data(web::Data::new(pool.clone()))
+            .route("/health", web::get().to(health_check))
             .route("/auth/signup", web::post().to(signup))
             .route("/auth/login", web::post().to(login))
             .route("/auth/forgot-password", web::post().to(forgot_password))

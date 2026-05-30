@@ -29,10 +29,11 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/cricscorebackend /app/cricscorebackend
+RUN chmod +x /app/cricscorebackend
 
 ENV HOST=0.0.0.0
-ENV PORT=8080
 ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
 
 EXPOSE 8080
 
