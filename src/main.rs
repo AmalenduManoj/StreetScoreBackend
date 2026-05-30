@@ -32,26 +32,43 @@ use crate::handlers::match_lineup_handlers::{
 use crate::handlers::tournament_match_handlers::{ get_tournament_matches, get_tournament_match, get_match_by_id as get_tournament_match_by_id};
 use actix_cors::Cors;
 
+fn build_cors() -> Cors {
+    let origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_else(|_| {
+        "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000".into()
+    });
+
+    let mut cors = Cors::default()
+        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+        .allowed_headers(vec![
+            actix_web::http::header::AUTHORIZATION,
+            actix_web::http::header::CONTENT_TYPE,
+        ])
+        .supports_credentials();
+
+    for origin in origins.split(',').map(str::trim).filter(|value| !value.is_empty()) {
+        cors = cors.allowed_origin(origin);
+    }
+
+    cors
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let _ = dotenvy::dotenv();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = create_pool(&database_url).await;
 
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "8080".into())
+        .parse::<u16>()
+        .expect("PORT must be a number");
+
+    println!("Cricscore API listening on {host}:{port}");
+
     HttpServer::new(move || {
         App::new()
-            .wrap(
-                Cors::default()
-                    .allowed_origin("http://localhost:5173")
-                    .allowed_origin("http://127.0.0.1:5173")
-                    .allowed_origin("http://127.0.0.1:3000")
-                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-                    .allowed_headers(vec![
-                        actix_web::http::header::AUTHORIZATION,
-                        actix_web::http::header::CONTENT_TYPE,
-                    ])
-                    .supports_credentials()
-            )
+            .wrap(build_cors())
             .app_data(web::Data::new(pool.clone()))
             .route("/auth/signup", web::post().to(signup))
             .route("/auth/login", web::post().to(login))
@@ -90,18 +107,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("")
                     .wrap(AuthMiddleware)
-                    .wrap(
-                        Cors::default()
-                            .allowed_origin("http://localhost:5173")
-                            .allowed_origin("http://127.0.0.1:5173")
-                            .allowed_origin("http://127.0.0.1:3000")
-                            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-                            .allowed_headers(vec![
-                                actix_web::http::header::AUTHORIZATION,
-                                actix_web::http::header::CONTENT_TYPE,
-                            ])
-                            .supports_credentials()
-                    )
+                    .wrap(build_cors())
                     .route("/auth/verify", web::get().to(verify_auth))
                     .route("/api/matches/{match_id}/lineup/{team_id}", web::put().to(set_team_lineup))
                     .route("/api/matches/{match_id}/start", web::post().to(start_match))
@@ -117,7 +123,7 @@ async fn main() -> std::io::Result<()> {
                     .configure(ranking_routes)
             )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((host.as_str(), port))?
     .run()
     .await
 }
