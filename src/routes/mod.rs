@@ -7,3 +7,4 @@ pub mod progress_routes;
 pub mod tournament_standing_routes;
 pub mod ranking_routes;
 pub mod tournament_match_routes;
+pub mod match_management_routes;

@@ -9,7 +9,7 @@ pub struct Players {
     pub runs_scored: i32,
     pub user_id: i64,
     pub wickets_taken: i32,
-    pub matches_played: i32,
+    pub matches_played: Option<i32>,
     pub batting_average: f64,
     pub bowling_average: f64,
     pub role: String,

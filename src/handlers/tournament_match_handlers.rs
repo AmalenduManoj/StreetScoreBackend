@@ -1,7 +1,9 @@
-use actix_web::{HttpResponse, web};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
 use sqlx::{PgPool, Row};
 use sqlx::postgres::PgRow;
 use serde::{Serialize, Deserialize};
+
+use crate::handlers::tournament_auth::{claims_from_request, forbidden, is_tournament_creator, unauthorized};
 
 fn tournament_match_response(row: &PgRow) -> serde_json::Value {
     serde_json::json!({
@@ -59,10 +61,25 @@ pub struct TournamentMatchUpdateRequest {
 // Create a tournament match entry
 pub async fn create_tournament_match(
     pool: web::Data<PgPool>,
+    req: HttpRequest,
     tournament_id: web::Path<i64>,
     data: web::Json<TournamentMatchCreateRequest>,
 ) -> HttpResponse {
+    let claims = match claims_from_request(&req) {
+        Some(claims) => claims,
+        None => return unauthorized(),
+    };
+
     let tournament_id = tournament_id.into_inner();
+
+    let allowed = match is_tournament_creator(pool.get_ref(), tournament_id, claims.user_id).await {
+        Ok(value) => value,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({ "error": e.to_string() })),
+    };
+
+    if !allowed {
+        return forbidden("Only the tournament creator can create matches");
+    }
 
     let mut tx = match pool.begin().await {
         Ok(tx) => tx,

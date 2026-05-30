@@ -26,6 +26,9 @@ use crate::routes::progress_routes::progress_routes;
 use crate::routes::tournament_standing_routes::tournament_standing_routes;
 use crate::routes::ranking_routes::ranking_routes;
 use crate::routes::tournament_match_routes::tournament_match_routes_protected;
+use crate::handlers::match_lineup_handlers::{
+    complete_match, get_match_lineup, get_match_player_stats, set_team_lineup, start_match,
+};
 use crate::handlers::tournament_match_handlers::{ get_tournament_matches, get_tournament_match, get_match_by_id as get_tournament_match_by_id};
 use actix_cors::Cors;
 
@@ -82,7 +85,8 @@ async fn main() -> std::io::Result<()> {
             .route("/api/tournament/{tournament_id}/matches", web::get().to(get_tournament_matches))
             .route("/api/tournament/{tournament_id}/matches/{match_number}", web::get().to(get_tournament_match))
             .route("/api/tournament/match/{id}", web::get().to(get_tournament_match_by_id))
-            .configure(progress_routes)
+            .route("/api/matches/{match_id}/lineup", web::get().to(get_match_lineup))
+            .route("/api/matches/{match_id}/player-stats", web::get().to(get_match_player_stats))
             .service(
                 web::scope("")
                     .wrap(AuthMiddleware)
@@ -99,6 +103,9 @@ async fn main() -> std::io::Result<()> {
                             .supports_credentials()
                     )
                     .route("/auth/verify", web::get().to(verify_auth))
+                    .route("/api/matches/{match_id}/lineup/{team_id}", web::put().to(set_team_lineup))
+                    .route("/api/matches/{match_id}/start", web::post().to(start_match))
+                    .route("/api/matches/{match_id}/complete", web::post().to(complete_match))
                     .configure(tournament_match_routes_protected)
                     .configure(match_routes_protected)  
                     .configure(player_routes_protected)

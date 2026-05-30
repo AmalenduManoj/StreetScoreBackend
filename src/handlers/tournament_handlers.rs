@@ -128,8 +128,8 @@ pub async fn get_my_tournaments(req: HttpRequest, pool: web::Data<PgPool>) -> im
          WHERE created_by_user_id = $1
          ORDER BY start_date DESC, id DESC",
     )
-    .bind(claims.user_id)
     .persistent(false)
+    .bind(claims.user_id)
     .fetch_all(pool.get_ref())
     .await;
 
@@ -143,8 +143,8 @@ pub async fn get_tournament_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -
     let tournament = sqlx::query_as::<_, Tournament>(
         "SELECT id, name, location, start_date, end_date, created_by_user_id FROM tournaments WHERE id = $1",
     )
-    .bind(id.into_inner())
     .persistent(false)
+    .bind(id.into_inner())
     .fetch_optional(pool.get_ref())
     .await;
 

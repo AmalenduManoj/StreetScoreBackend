@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder, HttpRequest, HttpMessage};
 use sqlx::PgPool;
 
-use crate::models::team::{CreateTeamRequest, Team};
+use crate::models::team::{CreateTeamRequest, Team, UpdateTeamRequest};
 
 pub async fn create_team(
     pool: web::Data<PgPool>,
@@ -79,12 +79,62 @@ pub async fn get_teams(pool: web::Data<PgPool>) -> impl Responder {
     }
 }
 
+pub async fn update_team(
+    pool: web::Data<PgPool>,
+    req: HttpRequest,
+    id: web::Path<i64>,
+    data: web::Json<UpdateTeamRequest>,
+) -> impl Responder {
+    let claims = match req.extensions().get::<crate::auth::jwt::Claims>() {
+        Some(claims) => claims.clone(),
+        None => return HttpResponse::Unauthorized().body("Missing auth claims"),
+    };
+
+    let team_id = id.into_inner();
+
+    let owner: Result<Option<i64>, sqlx::Error> = sqlx::query_scalar(
+        "SELECT created_by_user_id FROM teams WHERE id = $1",
+    )
+    .persistent(false)
+    .bind(team_id)
+    .fetch_optional(pool.get_ref())
+    .await;
+
+    match owner {
+        Ok(Some(owner_id)) => {
+            if owner_id != claims.user_id {
+                return HttpResponse::Forbidden().body("Only team creator can update the team");
+            }
+
+            let team = sqlx::query_as::<_, Team>(
+                "UPDATE teams SET name = $1, city = $2
+                 WHERE id = $3
+                 RETURNING id, name, city, matches_played, wins, losses, draws, created_by_user_id",
+            )
+            .persistent(false)
+            .bind(&data.name)
+            .bind(&data.city)
+            .bind(team_id)
+            .fetch_optional(pool.get_ref())
+            .await;
+
+            match team {
+                Ok(Some(team)) => HttpResponse::Ok().json(team),
+                Ok(None) => HttpResponse::NotFound().body("Team not found"),
+                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            }
+        }
+        Ok(None) => HttpResponse::NotFound().body("Team not found"),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
 pub async fn get_team_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> impl Responder {
     let team = sqlx::query_as::<_, Team>(
         "SELECT id, name, city, matches_played, wins, losses, draws, created_by_user_id FROM teams WHERE id = $1",
     )
-    .bind(id.into_inner())
     .persistent(false)
+    .bind(id.into_inner())
     .fetch_optional(pool.get_ref())
     .await;
 

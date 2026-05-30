@@ -66,9 +66,11 @@ pub async fn create_player(req: HttpRequest, pool: web::Data<PgPool>, data: web:
 }
 
 pub async fn get_players(pool: web::Data<PgPool>) -> impl Responder {
-    let players = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE $1::BIGINT IS NULL")
-        .bind(Option::<i64>::None)
+    let players = sqlx::query_as::<_, Players>(
+        "SELECT id, name, team_id, runs_scored, user_id, wickets_taken, COALESCE(matches_played, 0) AS matches_played, batting_average, bowling_average, role, dob, strike_rate, over_bowled, economy_rate, five_wicket_hauls, centuries, half_centuries, player_of_the_match_awards, player_of_the_series_awards, highest_score, best_bowling_figures, is_active, debut_date, last_match_date, profile_picture_url, bio, ball_faced, fours, sixes, three_wicket_hauls, catches, stumpings FROM players WHERE $1::BIGINT IS NULL",
+    )
         .persistent(false)
+        .bind(Option::<i64>::None)
         .fetch_all(pool.get_ref())
         .await;
 
@@ -79,7 +81,9 @@ pub async fn get_players(pool: web::Data<PgPool>) -> impl Responder {
 }
 
 pub async fn get_player_by_id(pool: web::Data<PgPool>, id: web::Path<i64>) -> impl Responder {
-    let player = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE id = $1")
+    let player = sqlx::query_as::<_, Players>(
+        "SELECT id, name, team_id, runs_scored, user_id, wickets_taken, COALESCE(matches_played, 0) AS matches_played, batting_average, bowling_average, role, dob, strike_rate, over_bowled, economy_rate, five_wicket_hauls, centuries, half_centuries, player_of_the_match_awards, player_of_the_series_awards, highest_score, best_bowling_figures, is_active, debut_date, last_match_date, profile_picture_url, bio, ball_faced, fours, sixes, three_wicket_hauls, catches, stumpings FROM players WHERE id = $1",
+    )
         .persistent(false)
         .bind(id.into_inner())
         .fetch_optional(pool.get_ref())
@@ -130,7 +134,9 @@ pub async fn get_player_me(req: HttpRequest, pool: web::Data<PgPool>) -> impl Re
         None => return HttpResponse::Unauthorized().body("Missing auth claims"),
     };
 
-    let player = sqlx::query_as::<_, Players>("SELECT * FROM players WHERE user_id = $1")
+    let player = sqlx::query_as::<_, Players>(
+        "SELECT id, name, team_id, runs_scored, user_id, wickets_taken, COALESCE(matches_played, 0) AS matches_played, batting_average, bowling_average, role, dob, strike_rate, over_bowled, economy_rate, five_wicket_hauls, centuries, half_centuries, player_of_the_match_awards, player_of_the_series_awards, highest_score, best_bowling_figures, is_active, debut_date, last_match_date, profile_picture_url, bio, ball_faced, fours, sixes, three_wicket_hauls, catches, stumpings FROM players WHERE user_id = $1",
+    )
         .persistent(false)
         .bind(claims.user_id)
         .fetch_optional(pool.get_ref())

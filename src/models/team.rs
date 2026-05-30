@@ -5,7 +5,7 @@ use sqlx::FromRow;
 pub struct Team {
     pub id: i64,
     pub name: String,
-    pub city: String,
+    pub city: Option<String>,
     pub matches_played: i32,
     pub wins: i32,
     pub losses: i32,
@@ -19,4 +19,10 @@ pub struct CreateTeamRequest {
     pub city: String,
     pub created_by_user_id: i64,
     pub player_ids: Vec<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateTeamRequest {
+    pub name: String,
+    pub city: String,
 }

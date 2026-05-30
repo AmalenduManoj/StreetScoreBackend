@@ -1,12 +1,49 @@
-use actix_web::{HttpResponse, web};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
 use sqlx::{PgPool, Row};
 use crate::models::progress::progress;
 use chrono::Utc;
 
+use crate::handlers::match_lineup_handlers::{after_progress_recorded, validate_progress_players};
+use crate::handlers::match_ops::load_match;
+use crate::handlers::tournament_auth::{claims_from_request, forbidden, is_tournament_creator_for_match, unauthorized};
+
 pub async fn create_progress(
     pool: web::Data<PgPool>,
+    req: HttpRequest,
     data: web::Json<progress>,
 ) -> HttpResponse {
+    let claims = match claims_from_request(&req) {
+        Some(claims) => claims,
+        None => return unauthorized(),
+    };
+
+    let allowed = match is_tournament_creator_for_match(pool.get_ref(), data.match_id, claims.user_id).await {
+        Ok(value) => value,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({ "error": e.to_string() })),
+    };
+
+    if !allowed {
+        return forbidden("Only the tournament creator can record match progress");
+    }
+
+    let m = match load_match(pool.get_ref(), data.match_id).await {
+        Ok(Some(m)) => m,
+        Ok(None) => {
+            return HttpResponse::NotFound().json(serde_json::json!({ "error": "Match not found" }));
+        }
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({ "error": e.to_string() })),
+    };
+
+    if m.status != "live" {
+        return HttpResponse::BadRequest().json(serde_json::json!({
+            "error": "Progress can only be added while the match is live"
+        }));
+    }
+
+    if let Err(response) = validate_progress_players(pool.get_ref(), data.match_id, data.batter_id, data.bowler_id).await {
+        return response;
+    }
+
     let result = sqlx::query(
         "INSERT INTO progress (match_id, batter_id, bowler_id, runs_scored, is_wicket, over_number, ball_number, commentary, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -28,6 +65,11 @@ pub async fn create_progress(
     match result {
         Ok(row) => {
             let id: i64 = row.get("id");
+            if let Err(e) = after_progress_recorded(pool.get_ref(), data.match_id).await {
+                return HttpResponse::InternalServerError().json(serde_json::json!({
+                    "error": e.to_string()
+                }));
+            }
             HttpResponse::Created().json(serde_json::json!({
                 "id": id,
                 "message": "Delivery recorded successfully"

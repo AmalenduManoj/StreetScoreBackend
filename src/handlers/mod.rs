@@ -9,3 +9,6 @@ pub mod progress_handlers;
 pub mod tournament_standing_handlers;
 pub mod ranking_handlers;
 pub mod tournament_match_handlers;
+pub mod tournament_auth;
+pub mod match_ops;
+pub mod match_lineup_handlers;
